@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Java Deep Packet Inspection (DPI) & Packet Analyzer Live Dashboard">
+    <title>Packet Analyzer | DPI Engine Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="logo-icon">⚡</div>
+                <div>
+                    <h1>DPI Engine Dashboard</h1>
+                    <p class="subtitle">Deep Packet Inspection & Flow Classifier</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span id="connection-status" class="status-badge status-connected">
+                    <span class="status-dot"></span> Live
+                </span>
+                <span id="last-updated" class="last-updated">Updating...</span>
+                <button id="btn-refresh" class="btn btn-secondary">
+                    <span class="icon">↻</span> Refresh
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <!-- Error Banner -->
+        <div id="error-banner" class="alert-banner alert-hidden">
+            <span class="alert-icon">⚠️</span>
+            <span id="error-message">Failed to connect to DPI REST API.</span>
+        </div>
+
+        <!-- 1. Summary Cards Section -->
+        <section class="section-container" aria-label="Packet & Flow Summary">
+            <div class="cards-grid">
+                <div class="card card-summary">
+                    <div class="card-header">
+                        <span class="card-title">Total Packets</span>
+                        <span class="card-icon">📦</span>
+                    </div>
+                    <div class="card-value" id="val-total-packets">--</div>
+                    <div class="card-subtext" id="val-total-bytes">-- bytes total</div>
+                </div>
+
+                <div class="card card-summary card-success">
+                    <div class="card-header">
+                        <span class="card-title">Forwarded</span>
+                        <span class="card-icon">✓</span>
+                    </div>
+                    <div class="card-value text-success" id="val-forwarded-packets">--</div>
+                    <div class="card-subtext">Traffic passed</div>
+                </div>
+
+                <div class="card card-summary card-danger">
+                    <div class="card-header">
+                        <span class="card-title">Dropped / Blocked</span>
+                        <span class="card-icon">✕</span>
+                    </div>
+                    <div class="card-value text-danger" id="val-dropped-packets">--</div>
+                    <div class="card-subtext" id="val-drop-rate">0.00% drop rate</div>
+                </div>
+
+                <div class="card card-summary card-info">
+                    <div class="card-header">
+                        <span class="card-title">Active Flows</span>
+                        <span class="card-icon">🔀</span>
+                    </div>
+                    <div class="card-value text-info" id="val-active-flows">--</div>
+                    <div class="card-subtext">5-Tuple sessions</div>
+                </div>
+
+                <div class="card card-summary">
+                    <div class="card-header">
+                        <span class="card-title">TCP Packets</span>
+                        <span class="card-icon">🌐</span>
+                    </div>
+                    <div class="card-value text-cyan" id="val-tcp-packets">--</div>
+                    <div class="card-subtext">Protocol 6</div>
+                </div>
+
+                <div class="card card-summary">
+                    <div class="card-header">
+                        <span class="card-title">UDP Packets</span>
+                        <span class="card-icon">📡</span>
+                    </div>
+                    <div class="card-value text-amber" id="val-udp-packets">--</div>
+                    <div class="card-subtext">Protocol 17</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Middle Row: Application Distribution & Traffic Security -->
+        <section class="section-container">
+            <div class="grid-2col">
+                <!-- Application Breakdown (CSS Bars) -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="section-title">Application Distribution</h2>
+                            <p class="section-subtitle">Classified by TLS SNI, HTTP Host & DNS Inspection</p>
+                        </div>
+                        <span id="classified-flow-count" class="badge">0 apps</span>
+                    </div>
+                    <div id="app-distribution-container" class="app-bars-container">
+                        <div class="loading-state">Loading application distribution...</div>
+                    </div>
+                </div>
+
+                <!-- Traffic & Security Policy Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="section-title">Traffic & Security Policy</h2>
+                            <p class="section-subtitle">Filter disposition and packet enforcement</p>
+                        </div>
+                        <span class="badge badge-shield">Policy Active</span>
+                    </div>
+
+                    <div class="security-metrics-list">
+                        <div class="metric-row">
+                            <span class="metric-label">Forwarded Packets</span>
+                            <span class="metric-val text-success" id="sec-forwarded">--</span>
+                        </div>
+                        <div class="metric-progress-track">
+                            <div id="sec-bar-forwarded" class="metric-progress-fill fill-success" style="width: 100%;"></div>
+                        </div>
+
+                        <div class="metric-row" style="margin-top: 1rem;">
+                            <span class="metric-label">Blocked / Dropped Packets</span>
+                            <span class="metric-val text-danger" id="sec-dropped">--</span>
+                        </div>
+                        <div class="metric-progress-track">
+                            <div id="sec-bar-dropped" class="metric-progress-fill fill-danger" style="width: 0%;"></div>
+                        </div>
+
+                        <div class="security-info-box" style="margin-top: 1.5rem;">
+                            <div class="info-item">
+                                <span class="info-title">Drop Rate:</span>
+                                <span class="info-value" id="sec-drop-rate">0.00%</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-title">DPI Engine Mode:</span>
+                                <span class="info-value">Stateful Flow Tracking</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-title">Encryption Notice:</span>
+                                <span class="info-value text-muted">Cleartext SNI / Host only (Payload is not decrypted)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Active Flows Table Section -->
+        <section class="section-container" aria-label="Tracked Network Flows">
+            <div class="card">
+                <div class="card-header table-card-header">
+                    <div>
+                        <h2 class="section-title">Tracked Network Flows (5-Tuple Sessions)</h2>
+                        <p class="section-subtitle">Bidirectional conversations tracked in memory</p>
+                    </div>
+                    <div class="table-search-box">
+                        <input type="text" id="flow-search-input" placeholder="Filter by IP, App, Port..." aria-label="Filter flows">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table" id="flows-table">
+                        <thead>
+                            <tr>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Protocol</th>
+                                <th>Application / SNI</th>
+                                <th class="text-right">Packets</th>
+                                <th class="text-right">Bytes</th>
+                                <th>State</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flows-table-body">
+                            <tr>
+                                <td colspan="8" class="text-center loading-state">Loading flows from /api/flows...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="flow-table-count">Showing 0 flows</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Java DPI Engine &bull; REST API: <a href="/api/stats" target="_blank">/api/stats</a> &bull; <a href="/api/flows" target="_blank">/api/flows</a></p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
